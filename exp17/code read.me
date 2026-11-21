@@ -1,0 +1,71 @@
+
+clc;
+clear;
+close all;
+
+% Given parameters
+c = 3e8;
+f = 1e6;
+lam = c/f;
+P = 1;                  % Transmitter power (kW)
+
+% Distance range (km)
+d = logspace(0,3,400);
+
+% Conductivity (S/m)
+sig = [0.01 5];         % Land and Sea
+
+% Initialize ground wave field
+Eg = zeros(2,numel(d));
+
+% Ground wave calculation
+for k = 1:2
+
+    x = 18000*sig(k)/(f/1e6);
+
+    p = pi*(d*1e3)./(lam*x);
+
+    A = (2 + 0.3*p)./(2 + p + 0.6*p.^2);
+
+    Eg(k,:) = 300*sqrt(P)./d .* A;
+
+end
+
+% Sky wave calculation
+hv = 100;               % Virtual height (km)
+rho = 0.5;              % Ionospheric reflection factor
+
+s = 2*sqrt((d/2).^2 + hv^2);
+
+Es = 300*sqrt(P)./s .* rho;
+
+% Plot results
+figure;
+
+loglog(d,Eg(1,:),'b','LineWidth',1.5);
+hold on;
+
+loglog(d,Eg(2,:),'r','LineWidth',1.5);
+
+loglog(d,Es,'k--','LineWidth',1.5);
+
+grid on;
+
+xlabel('Distance d (km)');
+ylabel('Field Strength (mV/m)');
+
+title('Ground Wave and Sky Wave Propagation');
+
+legend('Ground Wave (Land)', ...
+       'Ground Wave (Sea)', ...
+       'Sky Wave', ...
+       'Location','best');
+
+% Calculate crossover distance (land and sky wave)
+[~,k] = min(abs(Eg(1,:) - Es));
+
+d_cross = d(k);
+
+fprintf('Crossover Distance = %.2f km\n',d_cross);
+
+hold off;
