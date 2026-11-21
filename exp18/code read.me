@@ -1,0 +1,70 @@
+
+clc;
+clear;
+close all;
+
+% Given parameters
+c = 3e8;
+f = 900e6;                  % Frequency = 900 MHz
+lam = c/f;                  % Wavelength (m)
+
+h1 = 30;                    % Transmitter height (m)
+h2 = 1.5;                   % Receiver height (m)
+
+Pt = 1;                     % Transmitted power (W)
+Gt = 1;                     % Transmitter gain
+Gr = 1;                     % Receiver gain
+
+% Distance range (m)
+d = logspace(1.5,4.5,400);
+
+% Free-space received power
+Pfs = Pt*Gt*Gr*(lam./(4*pi*d)).^2;
+
+% Direct and reflected path distances
+r1 = sqrt(d.^2 + (h1-h2)^2);
+r2 = sqrt(d.^2 + (h1+h2)^2);
+
+% Phase difference
+dphi = 2*pi*(r2-r1)/lam;
+
+% Two-ray ground reflection model (Gamma = -1)
+Ptr = Pt*Gt*Gr*(lam./(4*pi*r1)).^2 ...
+      .* abs(1-exp(-1j*dphi)).^2;
+
+% Convert path gain into dB
+Gfs_dB = 10*log10(Pfs/Pt);
+Gtr_dB = 10*log10(Ptr/Pt);
+
+% Plot results
+figure;
+
+semilogx(d,Gfs_dB,'b','LineWidth',1.5);
+hold on;
+
+semilogx(d,Gtr_dB,'r','LineWidth',1.5);
+
+grid on;
+
+xlabel('Distance (m)');
+ylabel('Path Gain (dB)');
+
+title('Free-Space and Two-Ray Ground Reflection Models');
+
+legend('Free Space','Two-Ray','Location','best');
+
+% Breakpoint distance
+d_b = 4*h1*h2/lam;
+
+% Radio horizon calculations
+dh_1 = 3.57*(sqrt(h1)+sqrt(h2));
+dh_43 = 4.12*(sqrt(h1)+sqrt(h2));
+
+% Display results
+fprintf('Breakpoint Distance = %.2f m\n',d_b);
+
+fprintf('Radio Horizon (k = 1) = %.2f km\n',dh_1);
+
+fprintf('Radio Horizon (k = 4/3) = %.2f km\n',dh_43);
+
+hold off;
