@@ -1,0 +1,103 @@
+
+clc;
+clear;
+close all;
+
+% Step 1: Generate the desired signal
+fs = 10000;                     % Sampling frequency
+t = 0:1/fs:0.1-1/fs;            % Time vector
+
+signal = sin(2*pi*1000*t);      % Desired 1 kHz signal
+
+% Step 2: Generate different types of EMI
+emi_sine = 0.5*sin(2*pi*2500*t); 
+emi_noise = 0.3*randn(size(t)); 
+emi_imp = zeros(size(t));
+
+emi_imp(1:20:end) = 1;          % Impulsive EMI
+
+% Step 3: Combine EMI signals
+emi_total = emi_sine + emi_noise + emi_imp;
+
+% Step 4: Generate received signal
+received = signal + emi_total;
+
+% Step 5: Calculate input SNR
+SNR_in = 10*log10(mean(signal.^2)/mean(emi_total.^2));
+
+% Step 6: Plot signals
+figure;
+
+subplot(3,1,1);
+plot(t, signal);
+xlim([0 0.01]);
+grid on;
+title('Desired Signal');
+xlabel('Time (s)');
+ylabel('Amplitude');
+
+subplot(3,1,2);
+plot(t, emi_total);
+xlim([0 0.01]);
+grid on;
+title('Combined EMI');
+xlabel('Time (s)');
+ylabel('Amplitude');
+
+subplot(3,1,3);
+plot(t, received);
+xlim([0 0.01]);
+grid on;
+title('Received Signal with EMI');
+xlabel('Time (s)');
+ylabel('Amplitude');
+
+% Step 7: Frequency spectrum analysis
+N = length(received);
+f = (-N/2:N/2-1)*(fs/N);
+
+Received_FFT = abs(fftshift(fft(received)))/N;
+
+figure;
+plot(f, Received_FFT);
+xlim([0 5000]);
+grid on;
+xlabel('Frequency (Hz)');
+ylabel('Magnitude');
+title('Frequency Spectrum');
+
+% Step 8: Design Butterworth bandpass filter
+[b,a] = butter(4, [700 1300]/(fs/2), 'bandpass');
+
+% Step 9: Apply filter to remove EMI
+cleaned = filtfilt(b, a, received);
+
+% Step 10: Calculate output SNR
+SNR_out = 10*log10(mean(signal.^2)/mean((cleaned-signal).^2));
+
+% Step 11: Calculate SNR improvement
+Improvement = SNR_out - SNR_in;
+
+% Step 12: Display results
+fprintf('Input SNR       = %.2f dB\n', SNR_in);
+fprintf('Output SNR      = %.2f dB\n', SNR_out);
+fprintf('SNR Improvement = %.2f dB\n', Improvement);
+
+% Step 13: Plot filtered signal
+figure;
+
+subplot(2,1,1);
+plot(t, received);
+grid on;
+xlim([0 0.01]);
+title('Received Signal Before Filtering');
+xlabel('Time (s)');
+ylabel('Amplitude');
+
+subplot(2,1,2);
+plot(t, cleaned);
+grid on;
+xlim([0 0.01]);
+title('Cleaned Signal After EMI Filtering');
+xlabel('Time (s)');
+ylabel('Amplitude');
