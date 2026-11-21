@@ -1,0 +1,103 @@
+
+clc;
+clear;
+close all;
+
+% Peak electron density
+Nmax = 1e12;                 % electrons/m^3
+
+% Critical frequency calculation
+fc = 9*sqrt(Nmax)/1e6;       % MHz
+
+% Ionospheric layer parameters
+hm = 300;                    % Layer height (km)
+ym = 100;                    % Semi-thickness (km)
+
+% Height range
+h = linspace(hm-ym,hm+ym,200);
+
+% Parabolic electron density distribution
+N = Nmax*(1-((h-hm)/ym).^2);
+
+% Test frequencies
+f_test = [6 9 12]*1e6;
+
+% Refractive index calculation
+n_peak = sqrt(1-81*Nmax./f_test.^2);
+
+% Display refractive index
+disp('Refractive Index at Peak Electron Density:');
+disp(n_peak);
+
+% Virtual height and Earth radius
+hp = 300;                    % Virtual height (km)
+Re = 6371;                   % Earth radius (km)
+
+% Ground range
+d = 100:50:4000;             % Distance (km)
+
+% Flat Earth MUF calculation
+muf_flat = fc*sqrt(1+(d/(2*hp)).^2);
+
+% Curved Earth calculation
+psi = d/Re;
+
+phi0 = atan(Re*sin(psi/2)./ ...
+       ((Re+hp)-Re*cos(psi/2)));
+
+muf_curv = fc./cos(phi0);
+
+% Percentage error
+err = 100*(muf_flat-muf_curv)./muf_curv;
+
+% Skip distance calculation
+f0 = 15;                     % Operating frequency (MHz)
+
+d_skip = 2*hp*sqrt((f0/fc)^2-1);
+
+% Display results
+fprintf('Critical Frequency = %.2f MHz\n',fc);
+
+fprintf('Skip Distance = %.2f km\n',d_skip);
+
+fprintf('Maximum MUF (Flat Earth) = %.2f MHz\n', ...
+        max(muf_flat));
+
+fprintf('Maximum MUF (Curved Earth) = %.2f MHz\n', ...
+        max(muf_curv));
+
+fprintf('Maximum Percentage Error = %.2f %%\n', ...
+        max(err));
+
+% Plot MUF comparison
+figure;
+
+plot(d,muf_flat,'b--','LineWidth',1.5);
+hold on;
+
+plot(d,muf_curv,'r','LineWidth',1.5);
+
+grid on;
+
+xlabel('Ground Range d (km)');
+ylabel('MUF (MHz)');
+
+title('MUF Comparison: Flat Earth and Curved Earth');
+
+legend('Flat Earth','Curved Earth', ...
+       'Location','best');
+
+hold off;
+
+% Plot electron density distribution
+figure;
+
+plot(N,h,'k','LineWidth',1.5);
+
+grid on;
+
+xlabel('Electron Density (m^{-3})');
+ylabel('Height (km)');
+
+title('Ionospheric Electron Density Distribution');
+
