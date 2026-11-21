@@ -1,0 +1,105 @@
+
+clc;
+clear;
+close all;
+
+%% 1. Ionospheric Virtual Height Calculation
+
+fc = 9;                 % Critical frequency (MHz)
+hb = 200;                % Layer height (km)
+ym = 100;                % Semi-thickness (km)
+
+f = linspace(0.5,8.95,300);
+
+% Virtual height calculation
+hv = hb + (ym/2)*(f/fc).* ...
+     log((1+f/fc)./(1-f/fc));
+
+% Plot virtual height
+figure;
+
+plot(f,hv,'b','LineWidth',1.5);
+
+grid on;
+
+xlabel('Frequency f (MHz)');
+ylabel('Virtual Height h'' (km)');
+
+title('Ionospheric Virtual Height');
+
+%% 2. Pulse Reflection Height
+
+dt = 2e-3;              % Pulse delay (seconds)
+c = 3e8;                % Speed of light (m/s)
+
+hv_pulse = c*dt/2/1e3;  % Virtual height (km)
+
+fprintf('Pulse Reflection Height = %.2f km\n',hv_pulse);
+
+%% 3. Atmospheric Refractivity
+
+T = 288;                % Temperature (K)
+P = 1013;               % Pressure (hPa)
+e = 10;                 % Water vapour pressure (hPa)
+
+% Surface refractivity
+N0 = 77.6/T*(P + 4810*e/T);
+
+fprintf('Surface Refractivity = %.2f N-units\n',N0);
+
+%% 4. Refractivity Profile
+
+z = 0:5:400;            % Height (m)
+
+% Refractivity gradient
+grad = -40*ones(size(z));
+
+grad(z>=100 & z<150) = -300;
+
+% Refractivity distribution
+N = N0 + cumtrapz(z/1e3,grad);
+
+%% 5. Modified Refractivity
+
+M = N + 0.157*z;
+
+% Identify trapping layer
+trap = grad < -157;
+
+%% 6. Effective Earth Radius Factor
+
+a = 6371;               % Earth radius (km)
+
+k = 1./(1 + a*grad*1e-6);
+
+%% 7. Radio Horizon Calculation
+
+h1 = 30;                % Transmitter height (m)
+h2 = 1.5;               % Receiver height (m)
+
+d_hor = 3.57*sqrt(k(1)) * ...
+        (sqrt(h1)+sqrt(h2));
+
+fprintf('Radio Horizon = %.2f km\n',d_hor);
+
+%% 8. Plot Modified Refractivity
+
+figure;
+
+plot(M,z,'b','LineWidth',1.5);
+
+hold on;
+
+plot(M(trap),z(trap),'r.','MarkerSize',12);
+
+grid on;
+
+xlabel('Modified Refractivity M (N-units)');
+ylabel('Height z (m)');
+
+title('Modified Atmospheric Refractivity Profile');
+
+legend('Modified Refractivity','Trapping Layer', ...
+       'Location','best');
+
+hold off;
