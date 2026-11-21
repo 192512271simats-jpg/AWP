@@ -1,0 +1,106 @@
+
+clc;
+clear;
+close all;
+
+% Step 1: Define constants and material properties
+mu0 = 4*pi*1e-7;
+c = 3e8;
+
+sigma_r = 3.5e7/5.8e7;    % Relative conductivity of aluminium
+mu_r = 1;
+t = 1e-3;                 % Aluminium thickness (1 mm)
+
+l = 0.03;                 % Aperture dimension (m)
+
+% Step 2: Define frequency range
+f = logspace(6, 9, 400);  % Frequency range: 1 MHz to 1 GHz
+
+% Step 3: Calculate skin depth
+delta = 1 ./ sqrt(pi .* f .* mu0 .* mu_r .* 5.8e7 .* sigma_r);
+
+% Step 4: Calculate shielding effectiveness components
+A = 8.686 .* t ./ delta;  % Absorption loss (dB)
+
+R = 168 - 10 .* log10(mu_r .* f ./ sigma_r); 
+% Reflection loss (dB)
+
+B = 20 .* log10(abs(1 - exp(-2 .* t ./ delta)));
+% Multiple reflection correction (dB)
+
+% Step 5: Calculate material shielding effectiveness
+SE_mat = min(A + R + B, 150);
+
+% Step 6: Calculate aperture leakage
+SE_ap = max(20 .* log10((c ./ f) ./ (2 .* l)), 0);
+
+% Step 7: Calculate total shielding effectiveness
+SE_tot = min(SE_mat, SE_ap);
+
+% Step 8: Define unshielded emission and test frequency
+E_un = 60;                % Unshielded emission (dBuV/m)
+f0 = 1e9;                 % Test frequency (1 GHz)
+
+% Step 9: Calculate CISPR 32 Class B limit
+lim = 30 .* (f0 < 230e6) + 37 .* (f0 >= 230e6);
+
+% Step 10: Calculate shielding effectiveness at test frequency
+SE0 = interp1(f, SE_tot, f0);
+
+% Step 11: Calculate compliance margin
+margin = lim - (E_un - SE0);
+
+% Step 12: Calculate maximum aperture dimension
+l_max = (c/f0) / (2 * 10^((E_un - lim + 6)/20));
+
+% Step 13: Display calculated results
+fprintf('\n--- EMI Shielding Analysis Results ---\n');
+
+fprintf('Skin Depth at 1 GHz = %.6e m\n', delta(end));
+
+fprintf('Material SE at 1 GHz = %.2f dB\n', SE_mat(end));
+
+fprintf('Aperture SE at 1 GHz = %.2f dB\n', SE_ap(end));
+
+fprintf('Total SE at 1 GHz = %.2f dB\n', SE_tot(end));
+
+fprintf('Unshielded Emission = %.2f dBuV/m\n', E_un);
+
+fprintf('CISPR 32 Class B Limit = %.2f dBuV/m\n', lim);
+
+fprintf('Compliance Margin = %.2f dB\n', margin);
+
+fprintf('Maximum Aperture = %.6f m\n', l_max);
+
+% Step 14: Plot shielding effectiveness
+figure;
+
+semilogx(f/1e6, SE_mat, 'b', 'LineWidth', 1.5);
+hold on;
+
+semilogx(f/1e6, SE_ap, 'r--', 'LineWidth', 1.5);
+
+semilogx(f/1e6, SE_tot, 'k', 'LineWidth', 2);
+
+grid on;
+
+xlabel('Frequency (MHz)');
+ylabel('Shielding Effectiveness (dB)');
+
+title('Electromagnetic Shielding Effectiveness Analysis');
+
+legend('Material SE', 'Aperture SE', 'Total SE', ...
+       'Location', 'best');
+
+% Step 15: Plot compliance analysis
+figure;
+
+bar([lim, E_un-SE0]);
+
+set(gca, 'XTickLabel', {'CISPR Limit', 'Shielded Emission'});
+
+ylabel('Emission Level (dBuV/m)');
+
+title('EMI Compliance Analysis');
+
+grid on;
